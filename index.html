@@ -1,1 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>日文單字複習小工具</title>
+  <style>
+    :root {
+      --blue: #3978b8;
+      --blue-dark: #245783;
+      --blue-light: #eaf4ff;
+      --ink: #243447;
+      --muted: #718096;
+      --line: #dce6ef;
+      --white: #ffffff;
+      --green: #27835b;
+      --red: #bd4b4b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #f4f9ff 0%, #fbfdff 50%, #eef5fb 100%);
+      padding: 28px 16px 40px;
+    }
+    .container { max-width: 760px; margin: 0 auto; }
+    header { text-align: center; margin: 8px 0 24px; }
+    .eyebrow {
+      display: inline-block; padding: 6px 12px; border-radius: 999px;
+      background: var(--blue-light); color: var(--blue-dark); font-size: 13px; font-weight: 700;
+      letter-spacing: .04em;
+    }
+    h1 { font-size: clamp(26px, 5vw, 36px); margin: 14px 0 8px; }
+    .subtitle { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+    .tabs { display: flex; gap: 8px; justify-content: center; margin: 24px 0 18px; }
+    .tab {
+      border: 1px solid var(--line); border-radius: 12px; padding: 10px 18px; background: #fff;
+      color: var(--muted); font-weight: 700; cursor: pointer; font-size: 15px;
+    }
+    .tab.active { color: var(--blue-dark); background: var(--blue-light); border-color: #b8d6f4; }
+    .panel {
+      background: var(--white); border: 1px solid var(--line); border-radius: 22px;
+      box-shadow: 0 12px 34px rgba(44, 79, 112, .08); padding: clamp(20px, 5vw, 34px);
+    }
+    .section-title { margin: 0 0 8px; font-size: 19px; }
+    .section-desc { color: var(--muted); margin: 0 0 22px; font-size: 14px; line-height: 1.7; }
+    .progress-row { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; margin-bottom: 9px; }
+    .progress-track { height: 7px; background: #edf2f7; border-radius: 99px; overflow: hidden; margin-bottom: 26px; }
+    .progress-fill { height: 100%; width: 0; background: var(--blue); border-radius: 99px; transition: width .2s; }
+    .word-card {
+      min-height: 220px; border-radius: 18px; background: #f7fbff; border: 1px solid #e4eff9;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+      padding: 28px 16px; margin-bottom: 20px;
+    }
+    .word-label { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .japanese { font-size: clamp(36px, 8vw, 54px); font-weight: 750; letter-spacing: .04em; margin: 0 0 8px; }
+    .reading { color: var(--blue-dark); font-size: 17px; margin-bottom: 12px; }
+    .meaning { font-size: 20px; font-weight: 700; margin: 6px 0 0; }
+    .example { color: var(--muted); font-size: 14px; margin: 12px 0 0; line-height: 1.7; }
+    .hidden { display: none !important; }
+    .button-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    button { font: inherit; }
+    .btn {
+      border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; background: #fff;
+      color: var(--ink); cursor: pointer; font-weight: 700; transition: .15s ease; min-height: 46px;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: #a9c9e8; }
+    .btn:focus-visible, .tab:focus-visible, .option:focus-visible { outline: 3px solid #b8d6f4; outline-offset: 2px; }
+    .btn.primary { background: var(--blue); color: white; border-color: var(--blue); }
+    .btn.primary:hover { background: var(--blue-dark); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    .button-row .btn { flex: 1; }
+    .note { color: var(--muted); font-size: 12px; text-align: center; margin: 16px 0 0; }
+    .quiz-question { font-size: 25px; font-weight: 750; text-align: center; margin: 24px 0 8px; }
+    .quiz-reading { text-align: center; color: var(--blue-dark); margin: 0 0 24px; }
+    .options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .option {
+      min-height: 56px; border: 1px solid var(--line); border-radius: 13px; background: white; padding: 12px;
+      text-align: left; cursor: pointer; color: var(--ink); font-size: 15px;
+    }
+    .option:hover:not(:disabled) { border-color: var(--blue); background: #f7fbff; }
+    .option.correct { border-color: #86c7a6; background: #edfbf3; color: #17633f; }
+    .option.wrong { border-color: #e3a1a1; background: #fff2f2; color: #9e3030; }
+    .feedback { min-height: 28px; margin: 16px 0 8px; font-weight: 700; text-align: center; }
+    .feedback.good { color: var(--green); }
+    .feedback.bad { color: var(--red); }
+    .quiz-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; }
+    .score-box { text-align: center; padding: 26px 12px; }
+    .score-number { font-size: 48px; color: var(--blue-dark); font-weight: 800; margin: 8px 0; }
+    .small { color: var(--muted); font-size: 13px; line-height: 1.7; }
+    footer { text-align: center; color: #8292a3; font-size: 12px; margin-top: 20px; }
+    @media (max-width: 520px) {
+      body { padding: 18px 12px 28px; }
+      .tabs { display: grid; grid-template-columns: 1fr 1fr; }
+      .tab { padding: 10px 8px; }
+      .options { grid-template-columns: 1fr; }
+      .quiz-footer { align-items: stretch; flex-direction: column; }
+      .quiz-footer .btn { width: 100%; }
+      .button-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <span class="eyebrow">JAPANESE STUDY</span>
+      <h1>日文單字複習小工具</h1>
+      <p class="subtitle">每天一點點，讓日文單字慢慢累積。<br>先想想答案，再點開來確認吧！</p>
+    </header>
 
+    <nav class="tabs" aria-label="選擇學習模式">
+      <button class="tab active" id="flashcardTab" type="button">單字複習</button>
+      <button class="tab" id="quizTab" type="button">小測驗</button>
+    </nav>
+
+    <section class="panel" id="flashcardPanel">
+      <h2 class="section-title">單字卡</h2>
+      <p class="section-desc">先想想這個單字的意思，再查看答案。</p>
+      <div class="progress-row">
+        <span id="cardCounter">第 1 個單字</span>
+        <span id="cardTotal">共 12 個單字</span>
+      </div>
+      <div class="progress-track" aria-label="單字進度">
+        <div class="progress-fill" id="cardProgress"></div>
+      </div>
+      <div class="word-card">
+        <div class="word-label">這個日文單字是？</div>
+        <p class="japanese" id="cardWord">勉強</p>
+        <div class="reading hidden" id="cardReading">べんきょう</div>
+        <div class="meaning hidden" id="cardMeaning">學習、讀書</div>
+        <p class="example hidden" id="cardExample">例句：毎日、日本語を勉強します。<br>每天讀日文。</p>
+      </div>
+      <div class="button-row">
+        <button class="btn" id="showAnswerBtn" type="button">查看答案</button>
+        <button class="btn primary" id="nextWordBtn" type="button">下一個單字 →</button>
+      </div>
+      <p class="note">小技巧：先自己想答案，再查看中文意思，記憶會更深刻。</p>
+    </section>
+
+    <section class="panel hidden" id="quizPanel">
+      <h2 class="section-title">單字小測驗</h2>
+      <p class="section-desc">選出日文單字正確的中文意思，看看自己記得多少！</p>
+      <div id="quizPlaying">
+        <div class="progress-row">
+          <span id="quizCounter">第 1 / 5 題</span>
+          <span id="quizScore">答對 0 題</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="quizProgress"></div></div>
+        <p class="quiz-question" id="quizWord">勉強</p>
+        <p class="quiz-reading" id="quizReading">べんきょう</p>
+        <div class="options" id="quizOptions"></div>
+        <div class="feedback" id="quizFeedback" aria-live="polite"></div>
+        <div class="quiz-footer">
+          <span class="small" id="quizHint">選擇一個答案</span>
+          <button class="btn primary" id="quizNextBtn" type="button" disabled>下一題 →</button>
+        </div>
+      </div>
+      <div class="score-box hidden" id="quizResult">
+        <h3>測驗完成！</h3>
+        <div class="score-number" id="finalScore">0 / 5</div>
+        <p id="resultMessage">做得很好，繼續加油！</p>
+        <p class="small">多複習幾次，就會越來越熟悉。</p>
+        <button class="btn primary" id="restartQuizBtn" type="button">再測驗一次</button>
+      </div>
+    </section>
+    <footer>簡單複習・每天進步一點點</footer>
+  </main>
+
+  <script>
+    const words = [
+      { jp: "勉強", kana: "べんきょう", zh: "學習、讀書", example: "毎日、日本語を勉強します。", exZh: "每天讀日文。" },
+      { jp: "学校", kana: "がっこう", zh: "學校", example: "学校へ行きます。", exZh: "去學校。" },
+      { jp: "友達", kana: "ともだち", zh: "朋友", example: "友達と映画を見ます。", exZh: "和朋友看電影。" },
+      { jp: "食べる", kana: "たべる", zh: "吃", example: "パンを食べます。", exZh: "吃麵包。" },
+      { jp: "飲む", kana: "のむ", zh: "喝", example: "水を飲みます。", exZh: "喝水。" },
+      { jp: "楽しい", kana: "たのしい", zh: "開心、有趣", example: "日本語の勉強は楽しいです。", exZh: "學日文很有趣。" },
+      { jp: "映画", kana: "えいが", zh: "電影", example: "週末に映画を見ます。", exZh: "週末看電影。" },
+      { jp: "時間", kana: "じかん", zh: "時間", example: "時間があります。", exZh: "有時間。" },
+      { jp: "新しい", kana: "あたらしい", zh: "新的", example: "新しい本を買いました。", exZh: "買了新書。" },
+      { jp: "大切", kana: "たいせつ", zh: "重要、珍貴", example: "家族は大切です。", exZh: "家人很重要。" },
+      { jp: "旅行", kana: "りょこう", zh: "旅行", example: "日本へ旅行します。", exZh: "去日本旅行。" },
+      { jp: "美味しい", kana: "おいしい", zh: "好吃", example: "このケーキは美味しいです。", exZh: "這個蛋糕很好吃。" }
+    ];
+
+    let cardIndex = 0;
+    let answerShown = false;
+    let quizQuestions = [];
+    let quizIndex = 0;
+    let correctCount = 0;
+    let answered = false;
+
+    const $ = (id) => document.getElementById(id);
+    const flashcardTab = $("flashcardTab");
+    const quizTab = $("quizTab");
+    const flashcardPanel = $("flashcardPanel");
+    const quizPanel = $("quizPanel");
+
+    function setMode(mode) {
+      const isCard = mode === "card";
+      flashcardPanel.classList.toggle("hidden", !isCard);
+      quizPanel.classList.toggle("hidden", isCard);
+      flashcardTab.classList.toggle("active", isCard);
+      quizTab.classList.toggle("active", !isCard);
+      flashcardTab.setAttribute("aria-pressed", String(isCard));
+      quizTab.setAttribute("aria-pressed", String(!isCard));
+      if (!isCard && quizQuestions.length === 0) startQuiz();
+    }
+
+    function renderCard() {
+      const word = words[cardIndex];
+      $("cardWord").textContent = word.jp;
+      $("cardReading").textContent = word.kana;
+      $("cardMeaning").textContent = word.zh;
+      $("cardExample").innerHTML = "例句：" + word.example + "<br>" + word.exZh;
+      $("cardCounter").textContent = `第 ${cardIndex + 1} 個單字`;
+      $("cardTotal").textContent = `共 ${words.length} 個單字`;
+      $("cardProgress").style.width = `${((cardIndex + 1) / words.length) * 100}%`;
+      answerShown = false;
+      $("cardReading").classList.add("hidden");
+      $("cardMeaning").classList.add("hidden");
+      $("cardExample").classList.add("hidden");
+      $("showAnswerBtn").textContent = "查看答案";
+    }
+
+    function toggleAnswer() {
+      answerShown = !answerShown;
+      ["cardReading", "cardMeaning", "cardExample"].forEach(id => $(id).classList.toggle("hidden", !answerShown));
+      $("showAnswerBtn").textContent = answerShown ? "隱藏答案" : "查看答案";
+    }
+
+    function nextCard() {
+      cardIndex = (cardIndex + 1) % words.length;
+      renderCard();
+    }
+
+    function shuffle(list) {
+      const copy = [...list];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function startQuiz() {
+      quizQuestions = shuffle(words).slice(0, 5);
+      quizIndex = 0;
+      correctCount = 0;
+      answered = false;
+      $("quizPlaying").classList.remove("hidden");
+      $("quizResult").classList.add("hidden");
+      renderQuizQuestion();
+    }
+
+    function renderQuizQuestion() {
+      const question = quizQuestions[quizIndex];
+      answered = false;
+      $("quizCounter").textContent = `第 ${quizIndex + 1} / ${quizQuestions.length} 題`;
+      $("quizScore").textContent = `答對 ${correctCount} 題`;
+      $("quizProgress").style.width = `${(quizIndex / quizQuestions.length) * 100}%`;
+      $("quizWord").textContent = question.jp;
+      $("quizReading").textContent = question.kana;
+      $("quizFeedback").textContent = "";
+      $("quizFeedback").className = "feedback";
+      $("quizHint").textContent = "選擇一個答案";
+      $("quizNextBtn").disabled = true;
+      $("quizNextBtn").textContent = quizIndex === quizQuestions.length - 1 ? "查看結果 →" : "下一題 →";
+
+      const wrongAnswers = shuffle(words.filter(w => w.jp !== question.jp)).slice(0, 3);
+      const options = shuffle([question, ...wrongAnswers]);
+      const optionsEl = $("quizOptions");
+      optionsEl.innerHTML = "";
+      options.forEach(option => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "option";
+        button.textContent = option.zh;
+        button.addEventListener("click", () => chooseAnswer(button, option, question));
+        optionsEl.appendChild(button);
+      });
+    }
+
+    function chooseAnswer(button, selected, question) {
+      if (answered) return;
+      answered = true;
+      const buttons = [...$("quizOptions").querySelectorAll("button")];
+      buttons.forEach(btn => { btn.disabled = true; });
+      const isCorrect = selected.jp === question.jp;
+      if (isCorrect) {
+        correctCount++;
+        button.classList.add("correct");
+        $("quizFeedback").textContent = "答對了！太棒了。";
+        $("quizFeedback").classList.add("good");
+      } else {
+        button.classList.add("wrong");
+        const correctButton = buttons.find(btn => btn.textContent === question.zh);
+        if (correctButton) correctButton.classList.add("correct");
+        $("quizFeedback").textContent = `再記一下：${question.jp} 是「${question.zh}」。`;
+        $("quizFeedback").classList.add("bad");
+      }
+      $("quizScore").textContent = `答對 ${correctCount} 題`;
+      $("quizHint").textContent = isCorrect ? "繼續保持！" : "沒關係，記住答案就有進步。";
+      $("quizNextBtn").disabled = false;
+    }
+
+    function nextQuizQuestion() {
+      if (!answered) return;
+      quizIndex++;
+      if (quizIndex >= quizQuestions.length) {
+        showQuizResult();
+      } else {
+        renderQuizQuestion();
+      }
+    }
+
+    function showQuizResult() {
+      $("quizPlaying").classList.add("hidden");
+      $("quizResult").classList.remove("hidden");
+      $("finalScore").textContent = `${correctCount} / ${quizQuestions.length}`;
+      const percent = correctCount / quizQuestions.length;
+      $("resultMessage").textContent = percent === 1
+        ? "全部答對！你真的很厲害！"
+        : percent >= 0.6
+          ? "做得不錯！再複習一次會更熟悉。"
+          : "別灰心，回到單字卡複習後再試一次吧！";
+      $("quizProgress").style.width = "100%";
+    }
+
+    flashcardTab.addEventListener("click", () => setMode("card"));
+    quizTab.addEventListener("click", () => setMode("quiz"));
+    $("showAnswerBtn").addEventListener("click", toggleAnswer);
+    $("nextWordBtn").addEventListener("click", nextCard);
+    $("quizNextBtn").addEventListener("click", nextQuizQuestion);
+    $("restartQuizBtn").addEventListener("click", startQuiz);
+
+    renderCard();
+  </script>
+</body>
+</html>
